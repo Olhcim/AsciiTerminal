@@ -1,4 +1,4 @@
-package asciiTerminal;
+package com.olhcim.asciiterminal;
 
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseWheelEvent;
@@ -13,20 +13,19 @@ public class AsciiTerminal
     public final String FORMAT_VAR_ENTER = "skipaline";
     public final String FORMAT_CENTER = "%center";  
     
+    int heightInCharacters;
+    int widthInCharacters;
+    
     private int horrGap;
     private int vertGap;
     private String prefix;
     
     private String typed = "";
-    private ArrayList<String> log = new ArrayList<String>();
+    private ArrayList<String> log = new ArrayList<>();
     private int scrollPos;
     
     private boolean inputAfterLog = true;
-    private int inputPos;
 
-    
-    private AsciiPanel asciiPanel;
-    
     
     public AsciiTerminal(AsciiPanel ap) 
     {
@@ -35,18 +34,15 @@ public class AsciiTerminal
     
     public AsciiTerminal(AsciiPanel ap, int horrGap, int vertGap, String prefix)
     {
-        asciiPanel = ap;
     	this.horrGap = horrGap;
         this.vertGap = vertGap;
         this.prefix = prefix;
         
-        inputPos = ap.getHeightInCharacters() - 2;
+        heightInCharacters = ap.getHeightInCharacters();
+        widthInCharacters = ap.getWidthInCharacters();
 
         scrollToStart();
-    	
-    	paintAll();
     }
-
     
     
     public void setPrefix(String a)
@@ -64,7 +60,7 @@ public class AsciiTerminal
     { return vertGap; }
     
     public final int endPoint()
-    { return asciiPanel.getHeightInCharacters()- vertGap - 1; }
+    { return heightInCharacters - vertGap - 1; }
     
     
     
@@ -81,17 +77,17 @@ public class AsciiTerminal
     public void setInputAfterLog(boolean a)
     { inputAfterLog = a; }
     public final int inputBarPos()
-    { return (inputAfterLog) ? log.size() - scrollPos : inputPos; }
+    { return (inputAfterLog) ? log.size() - scrollPos : endPoint(); }
     
     
     
     public final void log(String a)
     { log.add( a.trim() ); }
     
-    public void write(String a, int y)
-    { write(a, horrGap, y); }
+    public void write(AsciiPanel asciiPanel, String a, int y)
+    { write(asciiPanel, a, horrGap, y); }
     
-    public void write(String a, int x, int y) {
+    public void write(AsciiPanel asciiPanel, String a, int x, int y) {
     	a = a.replace(FORMAT_VAR_PREFIX, prefix);
         a = a.replace(FORMAT_VAR_ENTER, "\n");
     	
@@ -105,32 +101,32 @@ public class AsciiTerminal
     
     
     
-    public void paintAll() {
-        paintLog();
-        paintInput();
+    public void paintAll(AsciiPanel asciiPanel) {
+        paintLog(asciiPanel);
+        paintInput(asciiPanel);
     }
     
-    private void paintLog() { 
+    private void paintLog(AsciiPanel asciiPanel) { 
     	asciiPanel.clear();
     	
         for(int i = vertGap(); i < endPoint(); i++) {
             try {
-                write(log.get(i + scrollPos), i);
+                write(asciiPanel, log.get(i + scrollPos), i);
             } catch (Exception e) {}
         }
     }
     
-    private void paintInput() {
+    private void paintInput(AsciiPanel asciiPanel) {
         try { 
-            write(FORMAT_VAR_PREFIX, inputBarPos());
-            write(typed, pregap(), inputBarPos());
+            write(asciiPanel, FORMAT_VAR_PREFIX, inputBarPos());
+            write(asciiPanel, typed, pregap(), inputBarPos());
         } catch (Exception e) {}
     }
     
-    public void clearLog() {
+    public void clearLog(AsciiPanel asciiPanel) {
     	log.clear();
     	scrollToStart();
-    	paintLog();
+    	asciiPanel.clear();
     }
     
     
@@ -145,7 +141,7 @@ public class AsciiTerminal
     
     public void typableCharacterPressed(KeyEvent e) {
         if (Character.isLetter(e.getKeyChar()) || Character.isSpaceChar(e.getKeyChar())) {
-            typed = (typed.length() < asciiPanel.getWidthInCharacters() - totalHorrGap()) ? (typed + e.getKeyChar()) : (typed);
+            typed = (typed.length() < widthInCharacters - totalHorrGap()) ? (typed + e.getKeyChar()) : (typed);
         }
     }
     
