@@ -10,7 +10,6 @@ import asciiPanel.AsciiPanel;
 public class AsciiTerminal
 {
     public final String FORMAT_VAR_PREFIX = "%prefix";
-    public final String FORMAT_VAR_ENTER = "skipaline";
     public final String FORMAT_CENTER = "%center";  
     
     int heightInCharacters;
@@ -50,46 +49,80 @@ public class AsciiTerminal
     
     
     
-    public final int totalHorrGap()
+    public int totalHorrGap()
     { return horrGap + prefix.length() + horrGap; }
     
-    public final int pregap()
+    public int pregap()
     { return horrGap + prefix.length(); }
     
-    public final int vertGap()
+    public int vertGap()
     { return vertGap; }
     
-    public final int endPoint()
+    public int endPoint()
     { return heightInCharacters - vertGap - 1; }
     
     
     
-    public final int startScrollPos()
+    public int startScrollPos()
     { return 0 - vertGap; }
-    public final void scrollToStart()
+    public void scrollToStart()
     { scrollPos = 0 - vertGap; }
     
-    public final int endScrollPos()
+    public int endScrollPos()
     { return log.size() - endPoint(); }
-    public final void scrollToEnd()
+    public void scrollToEnd()
     { scrollPos = (log.size() > endPoint() - vertGap) ? endScrollPos() : scrollPos; }
     
     public void setInputAfterLog(boolean a)
     { inputAfterLog = a; }
-    public final int inputBarPos()
+    public int inputBarPos()
     { return (inputAfterLog) ? log.size() - scrollPos : endPoint(); }
     
     
+    public void logln(String a)
+    { log(a); log(""); }
     
-    public final void log(String a)
-    { log.add( a.trim() ); }
+    public void log(String a)
+    {
+        if (stringLength(a) > widthInCharacters - totalHorrGap())
+        {
+            a = wrap(a, widthInCharacters - totalHorrGap());
+        }
+        
+        for (String current : a.split("\n"))
+        {
+            log.add( current );
+        }
+    }
+    
+    public int stringLength(String a)
+    {
+        return a.replace(FORMAT_VAR_PREFIX, "").replace(FORMAT_CENTER, "").length();
+    }
+    
+    public String wrap(String in,int len) {
+        in=in.trim();
+    
+        if(stringLength(in)<len)
+        {
+            return in;
+        }
+
+        if(in.substring(0, len).contains("\n"))
+        {
+            return in.substring(0, in.indexOf("\n")).trim() + "\n\n" + wrap(in.substring(in.indexOf("\n") + 1), len);
+        }
+    
+        int place=Math.max(Math.max(in.lastIndexOf(" ",len),in.lastIndexOf("\t",len)),in.lastIndexOf("-",len));
+        
+        return in.substring(0,place).trim()+"\n"+wrap(in.substring(place),len);
+    }
     
     public void write(AsciiPanel asciiPanel, String a, int y)
     { write(asciiPanel, a, horrGap, y); }
     
     public void write(AsciiPanel asciiPanel, String a, int x, int y) {
     	a = a.replace(FORMAT_VAR_PREFIX, prefix);
-        a = a.replace(FORMAT_VAR_ENTER, "\n");
     	
     	if (a.contains(FORMAT_CENTER)) {
             a = a.replace(FORMAT_CENTER, "");
