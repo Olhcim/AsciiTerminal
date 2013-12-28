@@ -3,7 +3,7 @@ package com.olhcim.asciiterminal;
 
 import java.awt.event.KeyEvent;
 
-public interface AsciiTerminalEvents {
+public interface AsciiTerminalCommandListener {
     
     public void commandEntered(String[] text, KeyEvent ke);
 

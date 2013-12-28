@@ -1,7 +1,5 @@
 
 package com.olhcim.asciiterminal;
-
-import asciiPanel.AsciiPanel;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseWheelEvent;
@@ -31,7 +29,7 @@ public class AsciiTerminal implements KeyListener, MouseWheelListener{
     private JFrame frame;
     
     private KeyEvent lastKeyEvent;
-    private AsciiTerminalEvents event;
+    private AsciiTerminalCommandListener commandListener;
     
 //----------Initialisation----------------------------------------------------//
     
@@ -62,6 +60,11 @@ public class AsciiTerminal implements KeyListener, MouseWheelListener{
     { scrollPos = (log.size() > calEndPoint() - vertGap) ? calEndScrollPos() : scrollPos; }
     public void setInputAfterLog(boolean a)
     { inputAfterLog = a; }
+    
+    public void addCommandListener(AsciiTerminalCommandListener commandListener)
+    {
+        this.commandListener = commandListener;
+    }
     
 //----------Calculations------------------------------------------------------//
     
@@ -96,7 +99,7 @@ public class AsciiTerminal implements KeyListener, MouseWheelListener{
             return in;
         }
         if(in.substring(0, len).contains("\n")) {
-            return in.substring(0, in.indexOf("\n")).trim() + "\n\n" + wrap(in.substring(in.indexOf("\n") + 1), len);
+            return in.substring(0, in.indexOf("\n")).trim() + "\n" + wrap(in.substring(in.indexOf("\n") + 1), len);
         }
     
         int place=Math.max(Math.max(in.lastIndexOf(" ",len),in.lastIndexOf("\t",len)),in.lastIndexOf("-",len));
@@ -105,8 +108,22 @@ public class AsciiTerminal implements KeyListener, MouseWheelListener{
     
 //----------General-Usage-----------------------------------------------------//
     
+    
+    
+    public void logSpace(int a)
+    { for (int i = 0; i < a; i++) { log(""); } }
+    
+    public void loglnCenter(String a)
+    { logln(FORMAT_CENTER + a); }
+    
+    public void logCenter(String a)
+    { log( FORMAT_CENTER + a ); }
+    
     public void logln(String a)
     { log(a); log(""); }
+    
+    public void log()
+    { log(""); }
     
     public void log(String a) {
         if (stringLengthNoFormatting(a) > calTextAreaWidth()) {
@@ -134,6 +151,7 @@ public class AsciiTerminal implements KeyListener, MouseWheelListener{
     public void paintAll() {
         paintLog();
         paintInput();
+        paintScrollBar();
         frame.repaint();
     }
     private void paintLog() { 
@@ -145,6 +163,30 @@ public class AsciiTerminal implements KeyListener, MouseWheelListener{
             } catch (Exception e) {}
         }
     }
+    
+    private void paintScrollBar()
+    {
+        int hic = asciiPanel.getHeightInCharacters();
+        
+        double barSize = hic;
+        int barPos = 0; 
+        
+        if ( log.size() > calEndPoint() )
+        {
+            barSize = (int) Math.round((double)calEndPoint() * (double)hic / (double)log.size());
+            barPos = (int) Math.round((double)scrollPos * (double)hic / (double)log.size()) ;
+            
+            barSize  = (barSize + barPos > hic) ? (barSize - (barSize+barPos - hic)) : barSize; //prevents errors with bars that go over the screen.
+            barSize = (barSize < 1) ? 1 : barSize;  //prevents bars smaller than 1 in size
+        }
+        
+        for (int i = 0; i < barSize; i++ )
+        {
+            asciiPanel.write( (char)222 /*221*/ /*219*/, asciiPanel.getWidthInCharacters() - 1, i + barPos );
+        }
+        
+    }
+    
     private void paintInput() {
         try { 
             write(FORMAT_VAR_PREFIX, calInputBarPos());
@@ -178,14 +220,17 @@ public class AsciiTerminal implements KeyListener, MouseWheelListener{
     public String[] inputEnterPressed(KeyEvent e) {
         String typedOld = null;
         
-        if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-            typedOld = typed;
+        if (!typed.trim().isEmpty())
+        {
+            if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                typedOld = typed;
 
-            log(FORMAT_VAR_PREFIX + typed.trim());
-            typed = "";
-            scrollToEnd();
+                log(FORMAT_VAR_PREFIX + typed.trim());
+                typed = "";
+                scrollToEnd();
+            }
         }
-        return (typedOld == null) ? null : typedOld.split(" ");
+        return (typedOld == null) ? null : typedOld.toLowerCase().split(" ");
     }
 
 //----------Input-ScrollWheel-------------------------------------------------//
@@ -234,7 +279,13 @@ public class AsciiTerminal implements KeyListener, MouseWheelListener{
         inputBackspacePressed(e);
         inputTypableCharacterPressed(e);
         
-        String[] entered = inputEnterPressed(e); if (entered != null) { event.commandEntered(entered, e); }
+        String[] entered = inputEnterPressed(e);
+
+        if (entered != null)
+        {
+            commandListener.commandEntered(entered, e);
+        }
+
         inputIncrementScrollPos(e);
         
         paintAll();
@@ -244,8 +295,17 @@ public class AsciiTerminal implements KeyListener, MouseWheelListener{
         lastKeyEvent = e;
     }
     @Override
-    public void mouseWheelMoved(MouseWheelEvent e) {
-        inputIncrementScrollPos(e, lastKeyEvent);
+    public void mouseWheelMoved(MouseWheelEvent me) {
+        
+        try
+        {
+            inputIncrementScrollPos(me, lastKeyEvent);
+        }
+        catch (NullPointerException npe)
+        {
+            inputIncrementScrollPos(me);
+        }
+        
         paintAll();
     }
 
